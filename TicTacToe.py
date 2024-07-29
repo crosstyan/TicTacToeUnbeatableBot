@@ -2,12 +2,13 @@ from copy import deepcopy
 from typing import Final, Literal, Optional
 
 Entry = Literal["X", "O", ".", "W"]
+Players = Literal["X", "O"]
 TIC: Final[Entry] = "X"
 TAC: Final[Entry] = "O"
 WIN_MARKER: Final[Entry] = "W"
 EMPTY: Final[Entry] = "."
 Point = tuple[int, int]
-GameState = dict[tuple[int, int], Entry]
+Board = dict[tuple[int, int], Entry]
 BOT_VS_BOT = False
 
 INT32_MIN: Final[int] = -2_147_483_648
@@ -18,11 +19,11 @@ SIZE: Final[int] = 3
 TIE = 0
 
 
-class Board:
-    player: Entry = TIC
-    opponent: Entry = TAC
+class GameState:
+    player: Players = TIC
+    opponent: Players = TAC
     size: Final[int] = SIZE
-    fields: GameState = {}
+    fields: Board = {}
 
     def __init__(self, other=None):
         if other:
@@ -43,7 +44,7 @@ class Board:
         ), "Invalid non empty move ({}, {}), occupied by {}".format(
             x, y, self.fields[x, y]
         )
-        board = Board(self)
+        board = GameState(self)
         board.fields[x, y] = board.player
         (board.player, board.opponent) = (board.opponent, board.player)
         return board
@@ -69,7 +70,7 @@ class Board:
             if is_opponent_move:
                 return (LOSING, None)
             return (WINNING, None)
-        elif Board.no_empty(self.fields):
+        elif GameState.no_empty(self.fields):
             return (TIE, None)
         elif is_opponent_move:
             best = (INT32_MIN, None)
@@ -102,7 +103,7 @@ class Board:
         return self.minimax(True)[1]
 
     @staticmethod
-    def no_empty(fields: GameState) -> bool:
+    def no_empty(fields: Board) -> bool:
         """
         Check if there are no empty fields left
         """
@@ -151,7 +152,7 @@ class Board:
         return False, []
 
     @staticmethod
-    def state_stringify(fields: GameState) -> str:
+    def state_stringify(fields: Board) -> str:
         string = ""
         for y in range(SIZE):
             for x in range(SIZE):
@@ -162,18 +163,18 @@ class Board:
     def __str__(self) -> str:
         string = ""
         string += "next: {}\n".format(self.player)
-        string += Board.state_stringify(self.fields)
+        string += GameState.state_stringify(self.fields)
         return string
 
 
 def main():
     import random
 
-    game_history: list[Board] = []
-    last = Board()
+    game_history: list[GameState] = []
+    last = GameState()
 
     def check_win(current_username: str):
-        if Board.no_empty(last.fields):
+        if GameState.no_empty(last.fields):
             print("Tie!")
             return True
         won, winning = last.won()
@@ -183,7 +184,7 @@ def main():
             d = deepcopy(last.fields)
             for x, y in winning:
                 d[x, y] = WIN_MARKER
-            print(Board.state_stringify(d))
+            print(GameState.state_stringify(d))
             return True
         return False
 
