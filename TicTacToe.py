@@ -1,15 +1,15 @@
 from copy import deepcopy
 from typing import Final, Literal, Optional
 
-Entry = Literal["X", "O", ".", "W"]
+Entry = Literal["X", "O", "·", "W"]
 Players = Literal["X", "O"]
 TIC: Final[Entry] = "X"
 TAC: Final[Entry] = "O"
 WIN_MARKER: Final[Entry] = "W"
-EMPTY: Final[Entry] = "."
+EMPTY: Final[Entry] = "·"
 Point = tuple[int, int]
 Board = dict[tuple[int, int], Entry]
-BOT_VS_BOT = False
+BOT_VS_BOT = True
 
 INT32_MIN: Final[int] = -2_147_483_648
 INT32_MAX: Final[int] = 2_147_483_647
@@ -49,7 +49,7 @@ class GameState:
         (board.player, board.opponent) = (board.opponent, board.player)
         return board
 
-    def minimax(self, is_opponent_move: bool) -> tuple[int, Optional[Point]]:
+    def min_max(self, is_opponent_move: bool) -> tuple[int, Optional[Point]]:
         """
         Calculate the minimax value of a board
 
@@ -79,7 +79,7 @@ class GameState:
                     # Depth first search, essentially
                     #
                     # the next move is bot's move, should maximize its value
-                    value, _ = self.move(x, y).minimax(False)
+                    value, _ = self.move(x, y).min_max(False)
                     if value > best[0]:
                         best = (value, (x, y))
                         if value == WINNING:
@@ -89,7 +89,7 @@ class GameState:
             best = (INT32_MAX, None)
             for x, y in self.fields:
                 if self.fields[x, y] == EMPTY:
-                    value, _ = self.move(x, y).minimax(True)
+                    value, _ = self.move(x, y).min_max(True)
                     if value < best[0]:
                         best = (value, (x, y))
                         if value == LOSING:
@@ -100,7 +100,7 @@ class GameState:
         """
         The best move
         """
-        return self.minimax(True)[1]
+        return self.min_max(True)[1]
 
     @staticmethod
     def no_empty(fields: Board) -> bool:
@@ -114,7 +114,7 @@ class GameState:
 
     def won(self) -> tuple[bool, list[Point]]:
         """
-        Check if the current player has won
+        Check if the *opponent* has won
         """
         # horizontal
         for y in range(self.size):
@@ -152,18 +152,19 @@ class GameState:
         return False, []
 
     @staticmethod
-    def state_stringify(fields: Board) -> str:
+    def board_stringify(fields: Board) -> str:
         string = ""
         for y in range(SIZE):
             for x in range(SIZE):
                 string += fields[x, y]
-            string += "\n"
+            if y != SIZE - 1:
+                string += "\n"
         return string
 
     def __str__(self) -> str:
         string = ""
         string += "next: {}\n".format(self.player)
-        string += GameState.state_stringify(self.fields)
+        string += GameState.board_stringify(self.fields)
         return string
 
 
@@ -184,7 +185,7 @@ def main():
             d = deepcopy(last.fields)
             for x, y in winning:
                 d[x, y] = WIN_MARKER
-            print(GameState.state_stringify(d))
+            print(GameState.board_stringify(d))
             return True
         return False
 
@@ -202,10 +203,12 @@ def main():
                 x = random.randint(0, SIZE - 1)
                 y = random.randint(0, SIZE - 1)
                 last = last.move(x, y)
+                print("bot move to ({}, {}) without thinking".format(x, y))
             else:
                 move = last.best()
                 assert move is not None, "Invalid state"
                 last = last.move(*move)
+                print("bot move to ({}, {}) considerably".format(*move))
         game_history.append(last)
 
     while True:
@@ -223,8 +226,9 @@ def main():
         game_iter(False)
 
     print("\n=== Game history ===")
-    for bd in game_history:
-        print(bd)
+    for st in game_history:
+        print(GameState.board_stringify(st.fields))
+        print("\n")
 
 
 if __name__ == "__main__":
